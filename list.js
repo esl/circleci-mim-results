@@ -3,7 +3,7 @@ if (typeof S3BL_IGNORE_PATH == 'undefined' || S3BL_IGNORE_PATH!=true) {
 }
 
 if (typeof BUCKET_URL == 'undefined') {
-  var BUCKET_URL = location.protocol + '//' + location.hostname;
+  var BUCKET_URL = location.protocol + '//' + location.host;
 }
 
 if (typeof BUCKET_NAME != 'undefined') {
@@ -20,6 +20,40 @@ if (typeof BUCKET_WEBSITE_URL == 'undefined') {
 
 if (typeof S3B_ROOT_DIR == 'undefined') {
   var S3B_ROOT_DIR = '';
+}
+
+// Redirect logic for s3_packages.html
+if (location.pathname.indexOf('s3_packages.html') !== -1) {
+  var urlParams = location.search.substring(1).split('&');
+  var prefix = null;
+
+  for (var i = 0; i < urlParams.length; i++) {
+    var param = urlParams[i].split('=');
+    if (param[0] === 'prefix') {
+      prefix = decodeURIComponent(param[1]);
+      break;
+    }
+  }
+
+  if (prefix) {
+    var parts = prefix.split('/');
+    var lastPart = parts[parts.length - 1];
+    if (lastPart.indexOf('mim_') !== -1) {
+      var updatedLastPart = lastPart.replace('mim_', 'mongooseim_');
+      parts[parts.length - 1] = updatedLastPart;
+      var updatedPrefix = parts.join('/');
+      var redirectUrl = BUCKET_URL + '/' + updatedPrefix;
+
+      // Trigger download without rendering or leaving an empty page
+      var a = document.createElement('a');
+      a.href = redirectUrl;
+      a.download = updatedLastPart;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      document.body.innerHTML = '<p>Downloading ' + updatedLastPart + '...</p>';
+    }
+  }
 }
 
 jQuery(function($) {
@@ -174,7 +208,7 @@ function prepareTable(info) {
     item.keyText = item.Key.substring(prefix.length);
     if (item.Type === 'directory') {
       if (S3BL_IGNORE_PATH) {
-        item.href = location.protocol + '//' + location.hostname + location.pathname + '?prefix=' + item.Key;
+        item.href = location.protocol + '//' + location.host + location.pathname + '?prefix=' + item.Key;
       } else {
         item.href = item.keyText;
       }
